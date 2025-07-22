@@ -17,6 +17,23 @@
             transition-timing-function: ease-in-out;
         }
     </style>
+    <!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAk6l2j1xzLtfNpOynZwYwsMNGPbNr-oyQ",
+    authDomain: "tif2025mytimetable.firebaseapp.com",
+    projectId: "tif2025mytimetable",
+    storageBucket:  "tif2025mytimetable.firebasestorage.app",
+    messagingSenderId: "955994270731",
+    appId: "1:955994270731:web:a40fd6e0387b5e02f16b0e"
+  };
+
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore(app);
+</script>
 </head>
 <body class="min-h-screen bg-gray-50 text-gray-800 p-4 sm:p-6 lg:p-8">
     <!-- Firebase設定を定義するスクリプトブロック (Canvas環境で提供されない場合) -->
@@ -155,7 +172,7 @@
         // Firebase SDKのバージョンを12.0.0に更新
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, deleteDoc, getDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // CSVデータはここに直接埋め込みます
         const TIF_TIMETABLE_CSV = `Date,Stage,Performer,Time
@@ -1047,96 +1064,76 @@
             return Math.floor(1000 + Math.random() * 9000).toString(); // 1000から9999までの4桁
         }
 
-        // スケジュールをコードで保存
-        async function saveScheduleWithCode() {
-            if (!db || !userId) {
-                console.error("FirestoreまたはユーザーIDが利用できません。");
-                showMessage("認証が完了していません。しばらくお待ちください。", true);
-                return;
-            }
-
-            const code = scheduleCodeInput.value.trim();
-            if (code.length !== 4 || !/^\d{4}$/.test(code)) {
-                showMessage("有効な4桁の数字コードを入力してください。", true);
-                return;
-            }
-
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            // myTimetableは既にイベントオブジェクトを値として持っているので、そのまま配列に変換して保存
-            const scheduleToSave = Object.values(myTimetable);
-
-            if (scheduleToSave.length === 0) {
-                showMessage("保存するスケジュールがありません。", true);
-                return;
-            }
-
-            const publicScheduleDocRef = doc(db, `artifacts/${appId}/public/schedules`, code);
-
-            try {
-                await setDoc(publicScheduleDocRef, { events: scheduleToSave, userId: userId });
-                showMessage(`スケジュールをコード「${code}」で保存しました！`);
-            } catch (e) {
-                console.error("コードでのスケジュール保存エラー:", e);
-                showMessage("スケジュールをコードで保存中にエラーが発生しました。", true);
+        // ボタンのローディング状態を管理するヘルパー関数
+        function setLoadingState(button, isLoading) {
+            if (isLoading) {
+                button.disabled = true;
+                button.classList.add('opacity-50', 'cursor-not-allowed');
+                // スピナーアイコンを追加
+                if (!button.querySelector('.loader-spinner')) {
+                    const spinner = document.createElement('span');
+                    spinner.classList.add('loader-spinner', 'animate-spin', 'ml-2');
+                    spinner.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+                    button.appendChild(spinner);
+                }
+            } else {
+                button.disabled = false;
+                button.classList.remove('opacity-50', 'cursor-not-allowed');
+                // スピナーアイコンを削除
+                const spinner = button.querySelector('.loader-spinner');
+                if (spinner) {
+                    spinner.remove();
+                }
             }
         }
+
+        // スケジュールをコードで保存
+        saveScheduleBtn.addEventListener('click', async () => {
+            const code = scheduleCodeInput.value.trim();
+            if (code.length !== 4) {
+                codeManagementMessage.textContent = '4桁のコードを入力してください。';
+                return;
+            }
+        
+            const scheduleData = {
+                message: 'ここにスケジュールのデータを格納します',
+                timestamp: Date.now()
+            };
+        
+            try {
+                await db.collection("schedules").doc(code).set(scheduleData);
+                codeManagementMessage.textContent = `コード「${code}」で保存しました（Firebase）。`;
+            } catch (e) {
+                console.error("保存エラー:", e);
+                codeManagementMessage.textContent = '保存に失敗しました。';
+            }
+        });
+
 
         // スケジュールをコードで読み込む
-        async function loadScheduleWithCode() {
-            if (!db || !userId) {
-                console.error("FirestoreまたはユーザーIDが利用できません。");
-                showMessage("認証が完了していません。しばらくお待ちください。", true);
-                return;
-            }
-
+        loadScheduleBtn.addEventListener('click', async () => {
             const code = scheduleCodeInput.value.trim();
-            if (code.length !== 4 || !/^\d{4}$/.test(code)) {
-                showMessage("有効な4桁の数字コードを入力してください。", true);
+            if (code.length !== 4) {
+                codeManagementMessage.textContent = '4桁のコードを入力してください。';
                 return;
             }
-
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const publicScheduleDocRef = doc(db, `artifacts/${appId}/public/schedules`, code);
 
             try {
-                const docSnap = await getDoc(publicScheduleDocRef);
-
-                if (docSnap.exists()) {
-                    const loadedData = docSnap.data();
-                    const loadedEvents = loadedData.events || [];
-
-                    // 現在のマイタイムテーブルをクリア
-                    // まずFirestoreから現在のユーザーのマイタイムテーブルを全て削除
-                    const currentMyTimetableDocs = await getDocs(collection(db, `artifacts/${appId}/users/${userId}/myTimetable`));
-                    const deletePromises = [];
-                    currentMyTimetableDocs.forEach((d) => {
-                        deletePromises.push(deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/myTimetable`, d.id)));
-                    });
-                    await Promise.all(deletePromises);
-
-                    // myTimetableオブジェクトもクリア
-                    myTimetable = {};
-
-                    // 読み込んだイベントをマイタイムテーブルに追加 (Firestoreとローカルオブジェクトの両方)
-                    const addPromises = [];
-                    loadedEvents.forEach(event => {
-                        addPromises.push(setDoc(doc(db, `artifacts/${appId}/users/${userId}/myTimetable`, event.id), event));
-                        myTimetable[event.id] = event; // ローカルオブジェクトにも追加
-                    });
-                    await Promise.all(addPromises);
-
-                    showMessage(`スケジュールをコード「${code}」から読み込みました！`);
-                    renderMyTimetableFilterButtons();
-                    renderMyTimetable();
-                    renderFullTimetable();
-                } else {
-                    showMessage(`コード「${code}」のスケジュールは見つかりませんでした。`, true);
-                }
-            } catch (e) {
-                console.error("コードでのスケジュール読み込みエラー:", e);
-                showMessage("スケジュールをコードで読み込み中にエラーが発生しました。", true);
+                const doc = await db.collection("schedules").doc(code).get();
+                if (!doc.exists) {
+                codeManagementMessage.textContent = `コード「${code}」のデータは存在しません。`;
+                return;
             }
+
+            const data = doc.data();
+            console.log("読み込んだデータ:", data);
+            codeManagementMessage.textContent = `コード「${code}」のデータを読み込みました（Consoleに表示）。`;
+        } catch (e) {
+            console.error("読み込みエラー:", e);
+            codeManagementMessage.textContent = '読み込みに失敗しました。';
         }
+    });
+
 
 
         // イベントリスナーの設定

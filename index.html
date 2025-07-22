@@ -17,23 +17,6 @@
             transition-timing-function: ease-in-out;
         }
     </style>
-    <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyAk6l2j1xzLtfNpOynZwYwsMNGPbNr-oyQ",
-    authDomain: "tif2025mytimetable.firebaseapp.com",
-    projectId: "tif2025mytimetable",
-    storageBucket:  "tif2025mytimetable.firebasestorage.app",
-    messagingSenderId: "955994270731",
-    appId: "1:955994270731:web:a40fd6e0387b5e02f16b0e"
-  };
-
-  const app = firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore(app);
-</script>
 </head>
 <body class="min-h-screen bg-gray-50 text-gray-800 p-4 sm:p-6 lg:p-8">
     <!-- Firebase設定を定義するスクリプトブロック (Canvas環境で提供されない場合) -->
@@ -99,7 +82,7 @@
                 <input
                     type="text"
                     id="schedule-code-input"
-                    placeholder="4桁のコードを入力または生成"
+                    placeholder="4桁の英数字を入力または生成"
                     maxlength="4"
                     class="flex-grow p-3 rounded-lg bg-gray-100 text-gray-800 placeholder-gray-500 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 transition duration-200 text-center sm:text-left"
                 />
@@ -671,7 +654,7 @@
             appRoot.innerHTML = `
                 <div class="flex flex-col items-center justify-center min-h-screen bg-red-600 text-white p-4 rounded-lg shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-circle mb-4"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-                    <h2 class="text-2xl font-bold mb-2">エラーが発生しました</h2>
+                    <h2 class="2xl font-bold mb-2">エラーが発生しました</h2>
                     <p class="text-lg text-center">${errorMessage}</p>
                     <p class="text-sm mt-4">ブラウザのデベロッパーコンソールで詳細を確認してください。</p>
                     <p class="text-sm">ページを再読み込みするか、後でもう一度お試しください。</p>
@@ -1059,9 +1042,14 @@
             }
         }
 
-        // ランダムな4桁のコードを生成
+        // ランダムな4桁の英数字コードを生成
         function generateRandomCode() {
-            return Math.floor(1000 + Math.random() * 9000).toString(); // 1000から9999までの4桁
+            const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let result = '';
+            for (let i = 0; i < 4; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
         }
 
         // ボタンのローディング状態を管理するヘルパー関数
@@ -1088,52 +1076,115 @@
         }
 
         // スケジュールをコードで保存
-        saveScheduleBtn.addEventListener('click', async () => {
-            const code = scheduleCodeInput.value.trim();
-            if (code.length !== 4) {
-                codeManagementMessage.textContent = '4桁のコードを入力してください。';
-                return;
-            }
-        
-            const scheduleData = {
-                message: 'ここにスケジュールのデータを格納します',
-                timestamp: Date.now()
-            };
-        
+        async function saveScheduleWithCode() {
+            setLoadingState(saveScheduleBtn, true); // Loading state
             try {
-                await db.collection("schedules").doc(code).set(scheduleData);
-                codeManagementMessage.textContent = `コード「${code}」で保存しました（Firebase）。`;
-            } catch (e) {
-                console.error("保存エラー:", e);
-                codeManagementMessage.textContent = '保存に失敗しました。';
-            }
-        });
+                if (!db || !userId) {
+                    console.error("FirestoreまたはユーザーIDが利用できません。");
+                    showMessage("認証が完了していません。しばらくお待ちください。", true);
+                    return;
+                }
 
+                const code = scheduleCodeInput.value.trim();
+                // 英数字4桁のバリデーションに変更
+                if (code.length !== 4 || !/^[a-zA-Z0-9]{4}$/.test(code)) {
+                    showMessage("有効な4桁の英数字コードを入力してください。", true);
+                    return;
+                }
+
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const scheduleToSave = Object.values(myTimetable);
+
+                if (scheduleToSave.length === 0) {
+                    showMessage("保存するスケジュールがありません。", true);
+                    return;
+                }
+
+                // パスを修正: public/schedules を public_schedules に変更
+                const publicScheduleDocRef = doc(db, `artifacts/${appId}/public_schedules`, code);
+                console.log("Saving schedule to:", publicScheduleDocRef.path, "with data:", scheduleToSave);
+
+                await setDoc(publicScheduleDocRef, { events: scheduleToSave, userId: userId });
+                showMessage(`スケジュールをコード「${code}」で保存しました！`);
+                console.log("Schedule saved successfully.");
+            } catch (e) {
+                console.error("コードでのスケジュール保存エラー:", e);
+                showMessage("スケジュールをコードで保存中にエラーが発生しました。", true);
+            } finally {
+                setLoadingState(saveScheduleBtn, false); // End loading state
+            }
+        }
 
         // スケジュールをコードで読み込む
-        loadScheduleBtn.addEventListener('click', async () => {
-            const code = scheduleCodeInput.value.trim();
-            if (code.length !== 4) {
-                codeManagementMessage.textContent = '4桁のコードを入力してください。';
-                return;
-            }
-
+        async function loadScheduleWithCode() {
+            setLoadingState(loadScheduleBtn, true); // Loading state
             try {
-                const doc = await db.collection("schedules").doc(code).get();
-                if (!doc.exists) {
-                codeManagementMessage.textContent = `コード「${code}」のデータは存在しません。`;
-                return;
+                if (!db || !userId) {
+                    console.error("FirestoreまたはユーザーIDが利用できません。");
+                    showMessage("認証が完了していません。しばらくお待ちください。", true);
+                    return;
+                }
+
+                const code = scheduleCodeInput.value.trim();
+                // 英数字4桁のバリデーションに変更
+                if (code.length !== 4 || !/^[a-zA-Z0-9]{4}$/.test(code)) {
+                    showMessage("有効な4桁の英数字コードを入力してください。", true);
+                    return;
+                }
+
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                // パスを修正: public/schedules を public_schedules に変更
+                const publicScheduleDocRef = doc(db, `artifacts/${appId}/public_schedules`, code);
+                console.log("Attempting to load schedule from:", publicScheduleDocRef.path);
+
+                const docSnap = await getDoc(publicScheduleDocRef);
+                console.log("Document snapshot exists:", docSnap.exists());
+
+                if (docSnap.exists()) {
+                    const loadedData = docSnap.data();
+                    const loadedEvents = loadedData.events || [];
+                    console.log("Loaded events count:", loadedEvents.length);
+
+                    if (loadedEvents.length === 0) {
+                        showMessage(`コード「${code}」のスケジュールは空です。`, true);
+                        return;
+                    }
+
+                    console.log("Clearing current myTimetable from Firestore...");
+                    const currentMyTimetableCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/myTimetable`);
+                    const currentMyTimetableDocs = await getDocs(currentMyTimetableCollectionRef);
+                    const deletePromises = [];
+                    currentMyTimetableDocs.forEach((d) => {
+                        deletePromises.push(deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/myTimetable`, d.id)));
+                    });
+                    await Promise.all(deletePromises);
+                    console.log("Current myTimetable cleared.");
+
+                    myTimetable = {}; // ローカルオブジェクトもクリア
+
+                    console.log("Adding loaded events to myTimetable in Firestore...");
+                    const addPromises = [];
+                    loadedEvents.forEach(event => {
+                        addPromises.push(setDoc(doc(db, `artifacts/${appId}/users/${userId}/myTimetable`, event.id), event));
+                        myTimetable[event.id] = event; // ローカルオブジェクトにも追加
+                    });
+                    await Promise.all(addPromises);
+                    console.log("Loaded events added to myTimetable.");
+
+                    showMessage(`スケジュールをコード「${code}」から読み込みました！`);
+                    renderMyTimetableFilterButtons();
+                    renderMyTimetable();
+                    renderFullTimetable();
+                } else {
+                    showMessage(`コード「${code}」のスケジュールは見つかりませんでした。`, true);
+                }
+            } catch (e) {
+                console.error("コードでのスケジュール読み込みエラー:", e);
+                showMessage("スケジュールをコードで読み込み中にエラーが発生しました。", true);
+            } finally {
+                setLoadingState(loadScheduleBtn, false); // End loading state
             }
-
-            const data = doc.data();
-            console.log("読み込んだデータ:", data);
-            codeManagementMessage.textContent = `コード「${code}」のデータを読み込みました（Consoleに表示）。`;
-        } catch (e) {
-            console.error("読み込みエラー:", e);
-            codeManagementMessage.textContent = '読み込みに失敗しました。';
         }
-    });
-
 
 
         // イベントリスナーの設定
@@ -1267,16 +1318,48 @@
             });
         }
 
+        // Firestoreリスナーを設定する関数
+        function setupFirestoreListeners() {
+            if (!db || !userId) {
+                console.error("FirestoreまたはユーザーIDが利用できません。Firestoreリスナーを設定できません。");
+                // エラーメッセージを表示し、マイタイムテーブルのコンテンツを更新
+                myTimetableContent.innerHTML = `<p class="text-lg text-red-600 text-center py-8">
+                    スケジュールの保存・読み込みには認証が必要です。
+                    <br>エラーが発生したため、マイタイムテーブルは利用できません。
+                </p>`;
+                firestoreLoadingIndicator.classList.add('hidden');
+                return;
+            }
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const myTimetableCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/myTimetable`);
+            
+            // onSnapshotを呼び出す前にローディングインジケーターを表示
+            firestoreLoadingIndicator.classList.remove('hidden');
+
+            onSnapshot(myTimetableCollectionRef, (snapshot) => {
+                firestoreLoadingIndicator.classList.add('hidden'); // ローディングインジケーターを非表示に
+                myTimetable = {}; // リセット
+                snapshot.forEach((doc) => {
+                    myTimetable[doc.id] = doc.data(); // ドキュメントのデータを直接保存
+                });
+                renderMyTimetableFilterButtons(); // マイタイムテーブルのフィルターボタンを再レンダリング
+                renderMyTimetable(); // マイタイムテーブルを再レンダリング
+                renderFullTimetable(); // 全タイムテーブルも更新（追加/削除ボタンの状態反映）
+            }, (err) => {
+                console.error("Firestoreからのデータ取得エラー:", err);
+                displayError("マイタイムテーブルの読み込み中にエラーが発生しました。", err); // エラーオブジェクトを渡す
+                firestoreLoadingIndicator.classList.add('hidden');
+            });
+        }
+
         // アプリケーションの初期化
         async function initApp() {
             try {
                 // Firebase設定の取得
-                // Canvas環境で__firebase_configが定義されていない場合に備えて、
-                // グローバルスコープの__firebase_configを使用します。
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 let firebaseConfig = {};
                 try {
-                    // __firebase_configは文字列として提供されるため、JSON.parseでオブジェクトに変換
                     firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
                 } catch (parseError) {
                     console.error("Firebase設定のパースエラー:", parseError);
@@ -1305,61 +1388,49 @@
                 // 認証状態の監視
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
+                        // ユーザーがサインインしている場合
                         userId = user.uid;
+                        console.log("User signed in:", userId);
+                        setupFirestoreListeners(); // Firestoreリスナーを設定
                     } else {
+                        // ユーザーがサインインしていない場合、サインインを試みる
+                        console.log("No user signed in. Attempting sign-in...");
                         try {
-                            // __initial_auth_tokenが定義されている場合はカスタムトークンでサインイン
                             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token !== '') {
                                 await signInWithCustomToken(auth, __initial_auth_token);
+                                console.log("Signed in with custom token.");
                             } else {
-                                // それ以外の場合は匿名でサインイン
                                 await signInAnonymously(auth);
+                                console.log("Signed in anonymously.");
                             }
-                            userId = auth.currentUser?.uid || crypto.randomUUID();
+                            // サインイン成功後、onAuthStateChangedが再度トリガーされ、
+                            // 上のif(user)ブロックでuserIdが設定され、Firestoreリスナーが設定される
                         } catch (e) {
-                            console.error("認証エラー:", e);
-                            displayError("認証に失敗しました。", e); // エラーオブジェクトを渡す
-                            userId = crypto.randomUUID(); // エラー時も一時的なIDを生成
+                            console.error("Initial authentication failed:", e);
+                            displayError("認証に失敗しました。アプリは一部機能が制限される可能性があります。", e);
+                            userId = null; // 認証失敗時はuserIdをnullに設定
+                            firestoreLoadingIndicator.classList.add('hidden'); // ローディングインジケーターを非表示に
+                            myTimetableContent.innerHTML = `<p class="text-lg text-red-600 text-center py-8">
+                                スケジュールの保存・読み込みには認証が必要です。
+                                <br>エラーが発生したため、マイタイムテーブルは利用できません。
+                            </p>`;
                         }
                     }
-                    // ユーザーIDの表示 (今回は非表示にするため、この部分のコードはコメントアウトまたは削除)
-                    // if (userId) {
-                    //     currentUserIdSpan.textContent = userId;
-                    //     userIdDisplay.classList.remove('hidden');
-                    // }
-
-                    // CSVデータのパース
-                    fullTimetable = parseCSV(TIF_TIMETABLE_CSV);
-
-                    // ユニークな日付の取得とソート
-                    uniqueDates = [...new Set(fullTimetable.map(event => event.Date))].sort();
-                    if (uniqueDates.length > 0) {
-                        selectedDate = uniqueDates[0]; // 最初のユニークな日付を全体タイムテーブルの初期選択に
-                        myTimetableFilterDate = 'all'; // マイタイムテーブルの初期フィルターは「すべて」
-                    }
-
-                    // Firestoreからのマイタイムテーブル購読
-                    const myTimetableCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/myTimetable`);
-                    onSnapshot(myTimetableCollectionRef, (snapshot) => {
-                        firestoreLoadingIndicator.classList.add('hidden'); // ローディングインジケーターを非表示に
-                        myTimetable = {}; // リセット
-                        snapshot.forEach((doc) => {
-                            myTimetable[doc.id] = doc.data(); // ドキュメントのデータを直接保存
-                        });
-                        renderMyTimetableFilterButtons(); // マイタイムテーブルのフィルターボタンを再レンダリング
-                        renderMyTimetable(); // マイタイムテーブルを再レンダリング
-                        renderFullTimetable(); // 全タイムテーブルも更新（追加/削除ボタンの状態反映）
-                    }, (err) => {
-                        console.error("Firestoreからのデータ取得エラー:", err);
-                        displayError("マイタイムテーブルの読み込み中にエラーが発生しました。", err); // エラーオブジェクトを渡す
-                        firestoreLoadingIndicator.classList.add('hidden');
-                    });
-
-                    // 初回レンダリング
-                    renderDateButtons(); // 全体タイムテーブルの日付ボタン
-                    renderFullTimetable(); // 全体タイムテーブル
-                    // renderMyTimetableFilterButtonsとrenderMyTimetableはonSnapshot内で呼ばれるため、ここでは不要
                 });
+
+                // CSVデータのパース
+                fullTimetable = parseCSV(TIF_TIMETABLE_CSV);
+
+                // ユニークな日付の取得とソート
+                uniqueDates = [...new Set(fullTimetable.map(event => event.Date))].sort();
+                if (uniqueDates.length > 0) {
+                    selectedDate = uniqueDates[0]; // 最初のユニークな日付を全体タイムテーブルの初期選択に
+                    myTimetableFilterDate = 'all'; // マイタイムテーブルの初期フィルターは「すべて」
+                }
+
+                // 初回レンダリング（認証状態に依存しない部分）
+                renderDateButtons(); // 全体タイムテーブルの日付ボタン
+                renderFullTimetable(); // 全体タイムテーブル
 
                 // イベントリスナーの設定
                 setupEventListeners();

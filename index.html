@@ -72,6 +72,47 @@
             </div>
         </div>
 
+        <!-- スケジュールコード管理セクション -->
+        <div class="bg-white rounded-xl p-4 sm:p-6 mb-8 shadow-lg border border-gray-200　text-center hidden">
+            <h2 class="text-3xl font-bold mb-6 text-indigo-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key-round mr-3 text-orange-500"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h3v-3h3v-3h3V3c0-.6-.4-1-1-1H2z"/><path d="M7 18v3"/><path d="M10 15v3"/><path d="M13 12v3"/><path d="M16 9v3"/></svg>
+                スケジュールコード管理
+            </h2>
+            <div class="flex flex-col sm:flex-row gap-4 mb-4 items-center">
+                <input
+                    type="text"
+                    id="schedule-code-input"
+                    placeholder="4桁の英数字を入力または生成"
+                    maxlength="4"
+                    class="flex-grow p-3 rounded-lg bg-gray-100 text-gray-800 placeholder-gray-500 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 transition duration-200 text-center sm:text-left"
+                />
+                <button
+                    id="generate-code-btn"
+                    class="px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center w-full sm:w-auto"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw mr-2"><path d="M21 12a9 9 0 0 0-9-9V3a9 9 0 0 0-9 9h0a9 9 0 0 0 9 9v0a9 9 0 0 0 9-9Z"/><path d="M17 2.3l-4.3 4.3"/><path d="M6 16.2 2.3 17"/></svg>
+                    新しいコードを生成
+                </button>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button
+                    id="save-schedule-btn"
+                    class="px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-400 flex items-center justify-center w-full sm:w-auto"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-save mr-2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    コードで保存
+                </button>
+                <button
+                    id="load-schedule-btn"
+                    class="px-5 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center w-full sm:w-auto"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    コードで読み込む
+                </button>
+            </div>
+            <p id="code-management-message" class="text-sm text-gray-600 mt-4 text-center"></p>
+        </div>
+
         <!-- 検索バー -->
         <div class="bg-white rounded-xl p-4 sm:p-6 mb-8 shadow-lg border border-gray-200 flex items-center space-x-3">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search text-gray-600"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -570,6 +611,13 @@
         const fullTimetableContent = document.getElementById('full-timetable-content');
         const appRoot = document.getElementById('app-root'); // エラー表示用
 
+        // スケジュールコード管理用のDOM要素
+        const scheduleCodeInput = document.getElementById('schedule-code-input');
+        const generateCodeBtn = document.getElementById('generate-code-btn');
+        const saveScheduleBtn = document.getElementById('save-schedule-btn');
+        const loadScheduleBtn = document.getElementById('load-schedule-btn');
+        const codeManagementMessage = document.getElementById('code-management-message');
+
         // メッセージボックス表示関数
         function showMessage(message, isError = false) {
             codeManagementMessage.textContent = message;
@@ -994,6 +1042,16 @@
             }
         }
 
+        // ランダムな4桁の英数字コードを生成
+        function generateRandomCode() {
+            const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let result = '';
+            for (let i = 0; i < 4; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
         // ボタンのローディング状態を管理するヘルパー関数
         function setLoadingState(button, isLoading) {
             if (isLoading) {
@@ -1017,7 +1075,30 @@
             }
         }
 
-       
+        // スケジュールをコードで保存
+        async function saveScheduleWithCode() {
+            setLoadingState(saveScheduleBtn, true); // Loading state
+            try {
+                if (!db || !userId) {
+                    console.error("FirestoreまたはユーザーIDが利用できません。");
+                    showMessage("認証が完了していません。しばらくお待ちください。", true);
+                    return;
+                }
+
+                const code = scheduleCodeInput.value.trim();
+                // 英数字4桁のバリデーションに変更
+                if (code.length !== 4 || !/^[a-zA-Z0-9]{4}$/.test(code)) {
+                    showMessage("有効な4桁の英数字コードを入力してください。", true);
+                    return;
+                }
+
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const scheduleToSave = Object.values(myTimetable);
+
+                if (scheduleToSave.length === 0) {
+                    showMessage("保存するスケジュールがありません。", true);
+                    return;
+                }
 
                 // パスを修正: public/schedules を public_schedules に変更
                 const publicScheduleDocRef = doc(db, `artifacts/${appId}/public_schedules`, code);
@@ -1034,7 +1115,76 @@
             }
         }
 
+        // スケジュールをコードで読み込む
+        async function loadScheduleWithCode() {
+            setLoadingState(loadScheduleBtn, true); // Loading state
+            try {
+                if (!db || !userId) {
+                    console.error("FirestoreまたはユーザーIDが利用できません。");
+                    showMessage("認証が完了していません。しばらくお待ちください。", true);
+                    return;
+                }
 
+                const code = scheduleCodeInput.value.trim();
+                // 英数字4桁のバリデーションに変更
+                if (code.length !== 4 || !/^[a-zA-Z0-9]{4}$/.test(code)) {
+                    showMessage("有効な4桁の英数字コードを入力してください。", true);
+                    return;
+                }
+
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                // パスを修正: public/schedules を public_schedules に変更
+                const publicScheduleDocRef = doc(db, `artifacts/${appId}/public_schedules`, code);
+                console.log("Attempting to load schedule from:", publicScheduleDocRef.path);
+
+                const docSnap = await getDoc(publicScheduleDocRef);
+                console.log("Document snapshot exists:", docSnap.exists());
+
+                if (docSnap.exists()) {
+                    const loadedData = docSnap.data();
+                    const loadedEvents = loadedData.events || [];
+                    console.log("Loaded events count:", loadedEvents.length);
+
+                    if (loadedEvents.length === 0) {
+                        showMessage(`コード「${code}」のスケジュールは空です。`, true);
+                        return;
+                    }
+
+                    console.log("Clearing current myTimetable from Firestore...");
+                    const currentMyTimetableCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/myTimetable`);
+                    const currentMyTimetableDocs = await getDocs(currentMyTimetableCollectionRef);
+                    const deletePromises = [];
+                    currentMyTimetableDocs.forEach((d) => {
+                        deletePromises.push(deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/myTimetable`, d.id)));
+                    });
+                    await Promise.all(deletePromises);
+                    console.log("Current myTimetable cleared.");
+
+                    myTimetable = {}; // ローカルオブジェクトもクリア
+
+                    console.log("Adding loaded events to myTimetable in Firestore...");
+                    const addPromises = [];
+                    loadedEvents.forEach(event => {
+                        addPromises.push(setDoc(doc(db, `artifacts/${appId}/users/${userId}/myTimetable`, event.id), event));
+                        myTimetable[event.id] = event; // ローカルオブジェクトにも追加
+                    });
+                    await Promise.all(addPromises);
+                    console.log("Loaded events added to myTimetable.");
+
+                    showMessage(`スケジュールをコード「${code}」から読み込みました！`);
+                    renderMyTimetableFilterButtons();
+                    renderMyTimetable();
+                    renderFullTimetable();
+                } else {
+                    showMessage(`コード「${code}」のスケジュールは見つかりませんでした。`, true);
+                }
+            } catch (e) {
+                console.error("コードでのスケジュール読み込みエラー:", e);
+                showMessage("スケジュールをコードで読み込み中にエラーが発生しました。", true);
+            } finally {
+                setLoadingState(loadScheduleBtn, false); // End loading state
+            }
+        }
 
 
         // イベントリスナーの設定

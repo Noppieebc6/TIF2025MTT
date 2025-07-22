@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TIF 2025 マイタイテ</title>
+    <title>TIF2025 マイタイテ</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -40,7 +40,7 @@
 
     <div id="app-root" class="max-w-7xl mx-auto">
         <h1 class="text-4xl sm:text-5xl font-extrabold text-center mb-8 text-indigo-700 drop-shadow-md">
-            TIF 2025 マイタイテ
+            TIF2025 マイタイテ
         </h1>
 
         <!-- ユーザーID表示セクション (非表示に設定) -->
@@ -73,7 +73,7 @@
         </div>
 
         <!-- スケジュールコード管理セクション -->
-        <div class="bg-white rounded-xl p-4 sm:p-6 mb-8 shadow-lg border border-gray-200　text-center hidden">
+        <div class="bg-white rounded-xl p-4 sm:p-6 mb-8 shadow-lg border border-gray-200 text-center hidden">
             <h2 class="text-3xl font-bold mb-6 text-indigo-700 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key-round mr-3 text-orange-500"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h3v-3h3v-3h3V3c0-.6-.4-1-1-1H2z"/><path d="M7 18v3"/><path d="M10 15v3"/><path d="M13 12v3"/><path d="M16 9v3"/></svg>
                 スケジュールコード管理
@@ -140,7 +140,7 @@
         <div class="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
             <h2 class="text-3xl font-bold mb-6 text-indigo-700 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-days mr-3 text-purple-500"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
-                TIF2025タイテ
+                TIF2025 タイテ
             </h2>
             <div id="full-timetable-content">
                 <p class="text-lg text-gray-600 text-center py-8">
@@ -1021,21 +1021,40 @@
             const eventDocRef = doc(db, `artifacts/${appId}/users/${userId}/myTimetable`, eventData.id);
 
             try {
+                let isAddedNow; // Track if event is added or removed
+
                 if (myTimetable[eventData.id]) {
                     // 既に存在する場合は削除
                     await deleteDoc(eventDocRef);
                     delete myTimetable[eventData.id]; // myTimetableオブジェクトからも削除
+                    isAddedNow = false;
                     console.log(`イベントを削除しました: ${eventData.Performer}`);
                     showMessage(`${eventData.Performer} をマイタイムテーブルから削除しました。`);
                 } else {
                     // 存在しない場合は追加
                     await setDoc(eventDocRef, eventData);
                     myTimetable[eventData.id] = eventData; // myTimetableオブジェクトに追加
+                    isAddedNow = true;
                     console.log(`イベントを追加しました: ${eventData.Performer}`);
                     showMessage(`${eventData.Performer} をマイタイムテーブルに追加しました。`);
                 }
                 renderMyTimetable(); // マイタイムテーブルを再レンダリング
-                renderFullTimetable(); // 全タイムテーブルも更新（追加/削除ボタンの状態反映）
+
+                // 全タイムテーブル内の対応するボタンの状態を更新
+                const fullTimetableButton = document.querySelector(`#full-timetable-content button[data-event-id="${eventData.id}"]`);
+                if (fullTimetableButton) {
+                    if (isAddedNow) {
+                        fullTimetableButton.classList.remove('bg-green-500', 'hover:bg-green-600', 'focus:ring-green-400');
+                        fullTimetableButton.classList.add('bg-red-500', 'hover:bg-red-600', 'focus:ring-red-400');
+                        fullTimetableButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>';
+                        fullTimetableButton.setAttribute('aria-label', `${eventData.Performer}をマイタイムテーブルから削除`);
+                    } else {
+                        fullTimetableButton.classList.remove('bg-red-500', 'hover:bg-red-600', 'focus:ring-red-400');
+                        fullTimetableButton.classList.add('bg-green-500', 'hover:bg-green-600', 'focus:ring-green-400');
+                        fullTimetableButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>';
+                        fullTimetableButton.setAttribute('aria-label', `${eventData.Performer}をマイタイムテーブルに追加`);
+                    }
+                }
             } catch (e) {
                 console.error("マイタイムテーブルの更新エラー:", e);
                 showMessage("タイムテーブルの更新中にエラーが発生しました。", true);
@@ -1345,7 +1364,7 @@
                 });
                 renderMyTimetableFilterButtons(); // マイタイムテーブルのフィルターボタンを再レンダリング
                 renderMyTimetable(); // マイタイムテーブルを再レンダリング
-                renderFullTimetable(); // 全タイムテーブルも更新（追加/削除ボタンの状態反映）
+                // renderFullTimetable(); // 全タイムテーブルも更新（追加/削除ボタンの状態反映） - ここは個別更新に変更
             }, (err) => {
                 console.error("Firestoreからのデータ取得エラー:", err);
                 displayError("マイタイムテーブルの読み込み中にエラーが発生しました。", err); // エラーオブジェクトを渡す

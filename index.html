@@ -43,6 +43,7 @@
             TOKYO IDOL FESTIVAL 2025 マイタイムテーブル
         </h1>
 
+        <!-- ユーザーID表示セクション (非表示に設定) -->
         <div id="user-id-display" class="bg-gray-100 text-gray-700 rounded-xl p-4 mb-8 shadow-sm border border-gray-200 text-center hidden">
             <p class="text-sm sm:text-base flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users mr-2 text-indigo-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -69,6 +70,47 @@
                     まだイベントが追加されていません。下のリストから追加してください！
                 </p>
             </div>
+        </div>
+
+        <!-- スケジュールコード管理セクション -->
+        <div class="bg-white rounded-xl p-4 sm:p-6 mb-8 shadow-lg border border-gray-200">
+            <h2 class="text-3xl font-bold mb-6 text-indigo-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key-round mr-3 text-orange-500"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h3v-3h3v-3h3V3c0-.6-.4-1-1-1H2z"/><path d="M7 18v3"/><path d="M10 15v3"/><path d="M13 12v3"/><path d="M16 9v3"/></svg>
+                スケジュールコード管理
+            </h2>
+            <div class="flex flex-col sm:flex-row gap-4 mb-4 items-center">
+                <input
+                    type="text"
+                    id="schedule-code-input"
+                    placeholder="4桁のコードを入力または生成"
+                    maxlength="4"
+                    class="flex-grow p-3 rounded-lg bg-gray-100 text-gray-800 placeholder-gray-500 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 transition duration-200 text-center sm:text-left"
+                />
+                <button
+                    id="generate-code-btn"
+                    class="px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center w-full sm:w-auto"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw mr-2"><path d="M21 12a9 9 0 0 0-9-9V3a9 9 0 0 0-9 9h0a9 9 0 0 0 9 9v0a9 9 0 0 0 9-9Z"/><path d="M17 2.3l-4.3 4.3"/><path d="M6 16.2 2.3 17"/></svg>
+                    新しいコードを生成
+                </button>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button
+                    id="save-schedule-btn"
+                    class="px-5 py-3 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-400 flex items-center justify-center w-full sm:w-auto"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-save mr-2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    コードで保存
+                </button>
+                <button
+                    id="load-schedule-btn"
+                    class="px-5 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-400 flex items-center justify-center w-full sm:w-auto"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    コードで読み込む
+                </button>
+            </div>
+            <p id="code-management-message" class="text-sm text-gray-600 mt-4 text-center"></p>
         </div>
 
         <!-- 検索バー -->
@@ -113,7 +155,7 @@
         // Firebase SDKのバージョンを12.0.0に更新
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, deleteDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // CSVデータはここに直接埋め込みます
         const TIF_TIMETABLE_CSV = `Date,Stage,Performer,Time
@@ -551,7 +593,7 @@
         let auth;
         let userId = null;
         let fullTimetable = [];
-        let myTimetable = {}; // { eventId: true } の形式で管理
+        let myTimetable = {}; // { eventId: eventObject } の形式で管理
         let searchQuery = '';
         let selectedDate = null; // 全体タイムテーブル用
         let myTimetableFilterDate = 'all'; // マイタイムテーブル用: 'all'または特定の日付文字列
@@ -569,11 +611,34 @@
         const fullTimetableContent = document.getElementById('full-timetable-content');
         const appRoot = document.getElementById('app-root'); // エラー表示用
 
-        // エラー表示関数
-        function displayError(message, errorObject = null) { // errorObjectを引数に追加
+        // スケジュールコード管理用のDOM要素
+        const scheduleCodeInput = document.getElementById('schedule-code-input');
+        const generateCodeBtn = document.getElementById('generate-code-btn');
+        const saveScheduleBtn = document.getElementById('save-schedule-btn');
+        const loadScheduleBtn = document.getElementById('load-schedule-btn');
+        const codeManagementMessage = document.getElementById('code-management-message');
+
+        // メッセージボックス表示関数
+        function showMessage(message, isError = false) {
+            codeManagementMessage.textContent = message;
+            codeManagementMessage.classList.remove('text-green-600', 'text-red-600', 'text-gray-600');
+            if (isError) {
+                codeManagementMessage.classList.add('text-red-600');
+            } else {
+                codeManagementMessage.classList.add('text-green-600');
+            }
+            // 3秒後にメッセージをクリア
+            setTimeout(() => {
+                codeManagementMessage.textContent = '';
+                codeManagementMessage.classList.remove('text-green-600', 'text-red-600');
+            }, 3000);
+        }
+
+        // エラー表示関数 (アプリ全体のエラー用)
+        function displayError(message, errorObject = null) {
             let errorMessage = message;
             if (errorObject) {
-                console.error("アプリケーションエラーの詳細:", errorObject); // エラーオブジェクトをコンソールに出力
+                console.error("アプリケーションエラーの詳細:", errorObject);
                 if (errorObject.code === 'auth/configuration-not-found') {
                     errorMessage += `<br><br><span class="text-sm font-normal">
                         Firebase認証の設定が見つかりません。
@@ -622,12 +687,12 @@
                         headerBg: 'bg-pink-100',
                         headerText: 'text-pink-800',
                         headerBorder: 'border-pink-200',
-                        stageBg: 'bg-pink-50',
-                        stageText: 'text-pink-700',
-                        stageBorder: 'border-pink-100',
-                        eventBg: 'bg-white',
-                        eventText: 'text-gray-800',
-                        eventBorder: 'border-pink-50',
+                        buttonActiveBg: 'bg-pink-600',
+                        buttonActiveText: 'text-white',
+                        buttonHoverBg: 'hover:bg-pink-300',
+                        buttonHoverText: 'hover:text-pink-800',
+                        buttonDefaultBg: 'bg-pink-200',
+                        buttonDefaultText: 'text-pink-700',
                         iconColor: 'text-pink-500'
                     };
                 case '8/2': // 水色系
@@ -635,12 +700,12 @@
                         headerBg: 'bg-blue-100',
                         headerText: 'text-blue-800',
                         headerBorder: 'border-blue-200',
-                        stageBg: 'bg-blue-50',
-                        stageText: 'text-blue-700',
-                        stageBorder: 'border-blue-100',
-                        eventBg: 'bg-white',
-                        eventText: 'text-gray-800',
-                        eventBorder: 'border-blue-50',
+                        buttonActiveBg: 'bg-blue-600',
+                        buttonActiveText: 'text-white',
+                        buttonHoverBg: 'hover:bg-blue-300',
+                        buttonHoverText: 'hover:text-blue-800',
+                        buttonDefaultBg: 'bg-blue-200',
+                        buttonDefaultText: 'text-blue-700',
                         iconColor: 'text-blue-500'
                     };
                 case '8/3': // 黄緑系
@@ -648,12 +713,12 @@
                         headerBg: 'bg-lime-100',
                         headerText: 'text-lime-800',
                         headerBorder: 'border-lime-200',
-                        stageBg: 'bg-lime-50',
-                        stageText: 'text-lime-700',
-                        stageBorder: 'border-lime-100',
-                        eventBg: 'bg-white',
-                        eventText: 'text-gray-800',
-                        eventBorder: 'border-lime-50',
+                        buttonActiveBg: 'bg-lime-600',
+                        buttonActiveText: 'text-white',
+                        buttonHoverBg: 'hover:bg-lime-300',
+                        buttonHoverText: 'hover:text-lime-800',
+                        buttonDefaultBg: 'bg-lime-200',
+                        buttonDefaultText: 'text-lime-700',
                         iconColor: 'text-lime-500'
                     };
                 default: // デフォルト（予期せぬ日付の場合）
@@ -661,13 +726,75 @@
                         headerBg: 'bg-gray-100',
                         headerText: 'text-gray-800',
                         headerBorder: 'border-gray-200',
-                        stageBg: 'bg-white',
-                        stageText: 'text-gray-700',
-                        stageBorder: 'border-gray-100',
-                        eventBg: 'bg-white',
-                        eventText: 'text-gray-800',
-                        eventBorder: 'border-gray-50',
+                        buttonActiveBg: 'bg-indigo-600',
+                        buttonActiveText: 'text-white',
+                        buttonHoverBg: 'hover:bg-gray-300',
+                        buttonHoverText: 'hover:text-gray-800',
+                        buttonDefaultBg: 'bg-gray-200',
+                        buttonDefaultText: 'text-gray-700',
                         iconColor: 'text-gray-500'
+                    };
+            }
+        }
+
+        // ステージに応じたテーマカラーを返すヘルパー関数
+        function getStageColors(stageName) {
+            switch (stageName) {
+                case 'UP-T HOT STAGE':
+                    return {
+                        bg: 'bg-red-50',
+                        text: 'text-red-800',
+                        border: 'border-red-200',
+                        icon: 'text-red-500'
+                    };
+                case 'HEAT GARAGE':
+                    return {
+                        bg: 'bg-orange-50',
+                        text: 'text-orange-800',
+                        border: 'border-orange-200',
+                        icon: 'text-orange-500'
+                    };
+                case 'SMILE GARDEN':
+                    return {
+                        bg: 'bg-green-50',
+                        text: 'text-green-800',
+                        border: 'border-green-200',
+                        icon: 'text-green-500'
+                    };
+                case 'DOLL FACTORY':
+                    return {
+                        bg: 'bg-purple-50',
+                        text: 'text-purple-800',
+                        border: 'border-purple-200',
+                        icon: 'text-purple-500'
+                    };
+                case 'SKY STAGE':
+                    return {
+                        bg: 'bg-cyan-50',
+                        text: 'text-cyan-800',
+                        border: 'border-cyan-200',
+                        icon: 'text-cyan-500'
+                    };
+                case 'TOROCCO PARK':
+                    return {
+                        bg: 'bg-yellow-50',
+                        text: 'text-yellow-800',
+                        border: 'border-yellow-200',
+                        icon: 'text-yellow-500'
+                    };
+                case '浮島STAGE':
+                    return {
+                        bg: 'bg-fuchsia-50',
+                        text: 'text-fuchsia-800',
+                        border: 'border-fuchsia-200',
+                        icon: 'text-fuchsia-500'
+                    };
+                default:
+                    return { // Default fallback
+                        bg: 'bg-gray-50',
+                        text: 'text-gray-800',
+                        border: 'border-gray-200',
+                        icon: 'text-gray-500'
                     };
             }
         }
@@ -693,25 +820,25 @@
 
         // アーティスト名を表示するヘルパー関数
         function getPerformerNameHtml(performerName, colors) {
-            const maxLength = 10; // 10文字以上で折りたたむ
+            const maxLength = 15; // 15文字以上で折りたたむ
             if (performerName.length > maxLength) {
                 const shortName = performerName.substring(0, maxLength);
                 return `
-                    <p class="font-semibold ${colors.eventText} cursor-pointer" onclick="togglePerformerName(this)">
+                    <p class="font-semibold ${colors.text} cursor-pointer" onclick="togglePerformerName(this)">
                         <span class="short-name">${shortName}</span>
                         <span class="full-name hidden">${performerName}</span>
                         <span class="toggle-indicator text-blue-500 text-xs ml-1">...</span>
                     </p>
                 `;
             } else {
-                return `<p class="font-semibold ${colors.eventText}">${performerName}</p>`;
+                return `<p class="font-semibold ${colors.text}">${performerName}</p>`;
             }
         }
 
         // マイタイムテーブルのレンダリング
         function renderMyTimetable() {
-            // まず、myTimetableに登録されているイベントをフルタイムテーブルから取得
-            let filteredEvents = Object.values(fullTimetable).filter(event => myTimetable[event.id]);
+            // myTimetableオブジェクトの値を配列に変換
+            let filteredEvents = Object.values(myTimetable);
 
             // myTimetableFilterDateに基づいてフィルタリング
             if (myTimetableFilterDate !== 'all') {
@@ -748,21 +875,22 @@
             let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
             for (const date in groupedMyTimetable) {
                 const events = groupedMyTimetable[date];
-                const colors = getDateColors(date);
+                const dateColors = getDateColors(date); // 日付のテーマカラーを取得
                 html += `
-                    <div class="${colors.stageBg} rounded-lg p-4 shadow-md border ${colors.stageBorder}">
-                        <h3 class="text-xl font-semibold mb-3 ${colors.headerText} flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-days mr-2 ${colors.iconColor}"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+                    <div class="${dateColors.headerBg} rounded-lg p-4 shadow-md border ${dateColors.headerBorder}">
+                        <h3 class="text-xl font-semibold mb-3 ${dateColors.headerText} flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-days mr-2 ${dateColors.iconColor}"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
                             ${date}
                         </h3>
                         <ul class="space-y-2">
                 `;
                 events.forEach(event => {
+                    const stageColors = getStageColors(event.Stage); // ステージのカラーを取得
                     html += `
-                            <li class="flex items-center justify-between ${colors.eventBg} p-3 rounded-lg shadow-sm border ${colors.eventBorder}">
+                            <li class="flex items-center justify-between ${stageColors.bg} p-3 rounded-lg shadow-sm border ${stageColors.border}">
                                 <div>
-                                    ${getPerformerNameHtml(event.Performer, colors)}
-                                    <p class="text-sm ${colors.eventText} flex items-center">
+                                    ${getPerformerNameHtml(event.Performer, stageColors)}
+                                    <p class="text-sm ${stageColors.text} flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock mr-1 text-gray-500"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                         ${event.Time} @ ${event.Stage}
                                     </p>
@@ -823,11 +951,11 @@
                 return;
             }
 
-            const colors = getDateColors(selectedDate);
+            const dateColors = getDateColors(selectedDate); // 日付のテーマカラーを取得
             let html = `
                 <div class="mb-8 last:mb-0">
-                    <h3 class="text-2xl font-bold mb-4 ${colors.headerText} ${colors.headerBg} p-3 rounded-lg shadow-md flex items-center border ${colors.headerBorder}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-days mr-2 ${colors.iconColor}"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+                    <h3 class="text-2xl font-bold mb-4 ${dateColors.headerText} ${dateColors.headerBg} p-3 rounded-lg shadow-md flex items-center border ${dateColors.headerBorder}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-days mr-2 ${dateColors.iconColor}"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
                         ${selectedDate}
                     </h3>
                     <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -835,10 +963,11 @@
 
             for (const stageName in currentDayTimetable) {
                 const events = currentDayTimetable[stageName];
+                const stageColors = getStageColors(stageName); // ステージのカラーを取得
                 html += `
-                    <div class="${colors.stageBg} rounded-xl p-4 shadow-lg border ${colors.stageBorder}">
-                        <h4 class="text-xl font-semibold mb-4 text-indigo-700 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users mr-2 ${colors.iconColor}"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <div class="${stageColors.bg} rounded-xl p-4 shadow-lg border ${stageColors.border}">
+                        <h4 class="text-xl font-semibold mb-4 ${stageColors.text} flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users mr-2 ${stageColors.icon}"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                             ${stageName}
                         </h4>
                         <ul class="space-y-3">
@@ -846,10 +975,10 @@
                 events.forEach(event => {
                     const isAdded = myTimetable[event.id];
                     html += `
-                            <li class="${colors.eventBg} p-3 rounded-lg shadow-sm border ${colors.eventBorder} flex items-center justify-between">
+                            <li class="${stageColors.bg} p-3 rounded-lg shadow-sm border ${stageColors.border} flex items-center justify-between">
                                 <div>
-                                    ${getPerformerNameHtml(event.Performer, colors)}
-                                    <p class="text-sm ${colors.eventText} flex items-center">
+                                    ${getPerformerNameHtml(event.Performer, stageColors)}
+                                    <p class="text-sm ${stageColors.text} flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock mr-1 text-gray-500"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                         ${event.Time}
                                     </p>
@@ -884,7 +1013,7 @@
         async function toggleMyTimetable(eventData) {
             if (!db || !userId) {
                 console.error("FirestoreまたはユーザーIDが利用できません。");
-                displayError("認証が完了していません。しばらくお待ちください。");
+                showMessage("認証が完了していません。しばらくお待ちください。", true);
                 return;
             }
 
@@ -895,17 +1024,120 @@
                 if (myTimetable[eventData.id]) {
                     // 既に存在する場合は削除
                     await deleteDoc(eventDocRef);
+                    delete myTimetable[eventData.id]; // myTimetableオブジェクトからも削除
                     console.log(`イベントを削除しました: ${eventData.Performer}`);
+                    showMessage(`${eventData.Performer} をマイタイムテーブルから削除しました。`);
                 } else {
                     // 存在しない場合は追加
                     await setDoc(eventDocRef, eventData);
+                    myTimetable[eventData.id] = eventData; // myTimetableオブジェクトに追加
                     console.log(`イベントを追加しました: ${eventData.Performer}`);
+                    showMessage(`${eventData.Performer} をマイタイムテーブルに追加しました。`);
                 }
+                renderMyTimetable(); // マイタイムテーブルを再レンダリング
+                renderFullTimetable(); // 全タイムテーブルも更新（追加/削除ボタンの状態反映）
             } catch (e) {
                 console.error("マイタイムテーブルの更新エラー:", e);
-                displayError("タイムテーブルの更新中にエラーが発生しました。", e);
+                showMessage("タイムテーブルの更新中にエラーが発生しました。", true);
             }
         }
+
+        // ランダムな4桁のコードを生成
+        function generateRandomCode() {
+            return Math.floor(1000 + Math.random() * 9000).toString(); // 1000から9999までの4桁
+        }
+
+        // スケジュールをコードで保存
+        async function saveScheduleWithCode() {
+            if (!db || !userId) {
+                console.error("FirestoreまたはユーザーIDが利用できません。");
+                showMessage("認証が完了していません。しばらくお待ちください。", true);
+                return;
+            }
+
+            const code = scheduleCodeInput.value.trim();
+            if (code.length !== 4 || !/^\d{4}$/.test(code)) {
+                showMessage("有効な4桁の数字コードを入力してください。", true);
+                return;
+            }
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            // myTimetableは既にイベントオブジェクトを値として持っているので、そのまま配列に変換して保存
+            const scheduleToSave = Object.values(myTimetable);
+
+            if (scheduleToSave.length === 0) {
+                showMessage("保存するスケジュールがありません。", true);
+                return;
+            }
+
+            const publicScheduleDocRef = doc(db, `artifacts/${appId}/public/schedules`, code);
+
+            try {
+                await setDoc(publicScheduleDocRef, { events: scheduleToSave, userId: userId });
+                showMessage(`スケジュールをコード「${code}」で保存しました！`);
+            } catch (e) {
+                console.error("コードでのスケジュール保存エラー:", e);
+                showMessage("スケジュールをコードで保存中にエラーが発生しました。", true);
+            }
+        }
+
+        // スケジュールをコードで読み込む
+        async function loadScheduleWithCode() {
+            if (!db || !userId) {
+                console.error("FirestoreまたはユーザーIDが利用できません。");
+                showMessage("認証が完了していません。しばらくお待ちください。", true);
+                return;
+            }
+
+            const code = scheduleCodeInput.value.trim();
+            if (code.length !== 4 || !/^\d{4}$/.test(code)) {
+                showMessage("有効な4桁の数字コードを入力してください。", true);
+                return;
+            }
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const publicScheduleDocRef = doc(db, `artifacts/${appId}/public/schedules`, code);
+
+            try {
+                const docSnap = await getDoc(publicScheduleDocRef);
+
+                if (docSnap.exists()) {
+                    const loadedData = docSnap.data();
+                    const loadedEvents = loadedData.events || [];
+
+                    // 現在のマイタイムテーブルをクリア
+                    // まずFirestoreから現在のユーザーのマイタイムテーブルを全て削除
+                    const currentMyTimetableDocs = await getDocs(collection(db, `artifacts/${appId}/users/${userId}/myTimetable`));
+                    const deletePromises = [];
+                    currentMyTimetableDocs.forEach((d) => {
+                        deletePromises.push(deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/myTimetable`, d.id)));
+                    });
+                    await Promise.all(deletePromises);
+
+                    // myTimetableオブジェクトもクリア
+                    myTimetable = {};
+
+                    // 読み込んだイベントをマイタイムテーブルに追加 (Firestoreとローカルオブジェクトの両方)
+                    const addPromises = [];
+                    loadedEvents.forEach(event => {
+                        addPromises.push(setDoc(doc(db, `artifacts/${appId}/users/${userId}/myTimetable`, event.id), event));
+                        myTimetable[event.id] = event; // ローカルオブジェクトにも追加
+                    });
+                    await Promise.all(addPromises);
+
+                    showMessage(`スケジュールをコード「${code}」から読み込みました！`);
+                    renderMyTimetableFilterButtons();
+                    renderMyTimetable();
+                    renderFullTimetable();
+                } else {
+                    showMessage(`コード「${code}」のスケジュールは見つかりませんでした。`, true);
+                }
+            } catch (e) {
+                console.error("コードでのスケジュール読み込みエラー:", e);
+                showMessage("スケジュールをコードで読み込み中にエラーが発生しました。", true);
+            }
+        }
+
 
         // イベントリスナーの設定
         function setupEventListeners() {
@@ -958,6 +1190,15 @@
                     }
                 }
             });
+
+            // スケジュールコード管理ボタンのイベントリスナー
+            generateCodeBtn.addEventListener('click', () => {
+                scheduleCodeInput.value = generateRandomCode();
+                showMessage("新しいコードを生成しました。");
+            });
+
+            saveScheduleBtn.addEventListener('click', saveScheduleWithCode);
+            loadScheduleBtn.addEventListener('click', loadScheduleWithCode);
         }
 
         // 全体タイムテーブルの日付選択ボタンのレンダリング
@@ -966,16 +1207,18 @@
             uniqueDates.forEach(date => {
                 const button = document.createElement('button');
                 button.textContent = date;
+                const dateColors = getDateColors(date); // 日付のテーマカラーを取得
                 button.classList.add(
                     'px-4', 'py-2', 'rounded-full', 'text-sm', 'font-semibold', // サイズを小さく調整
-                    'transition-all', 'duration-300', 'ease-in-out', 'shadow-md'
+                    'transition-all', 'duration-300', 'ease-in-out', 'shadow-md',
+                    dateColors.buttonDefaultBg, dateColors.buttonDefaultText,
+                    dateColors.buttonHoverBg, dateColors.buttonHoverText
                 );
                 if (selectedDate === date) {
-                    button.classList.add('bg-indigo-600', 'text-white', 'transform', 'scale-105', 'shadow-xl');
-                    button.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'hover:text-gray-800');
+                    button.classList.add(dateColors.buttonActiveBg, dateColors.buttonActiveText, 'transform', 'scale-105', 'shadow-xl');
+                    button.classList.remove(dateColors.buttonDefaultBg, dateColors.buttonDefaultText);
                 } else {
-                    button.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'hover:text-gray-800');
-                    button.classList.remove('bg-indigo-600', 'text-white', 'transform', 'scale-105', 'shadow-xl');
+                    button.classList.remove(dateColors.buttonActiveBg, dateColors.buttonActiveText, 'transform', 'scale-105', 'shadow-xl');
                 }
                 dateSelectionButtonsContainer.appendChild(button);
             });
@@ -985,20 +1228,23 @@
         function renderMyTimetableFilterButtons() {
             myTimetableDateFilterContainer.innerHTML = ''; // 既存のボタンをクリア
 
+            const defaultDateColors = getDateColors('default'); // デフォルトカラーテーマを取得
+
             // 「すべて」ボタン
             const allButton = document.createElement('button');
             allButton.textContent = 'すべて';
             allButton.dataset.date = 'all';
             allButton.classList.add(
                 'px-3', 'py-1.5', 'rounded-full', 'text-xs', 'font-semibold', // サイズを小さく調整
-                'transition-all', 'duration-300', 'ease-in-out', 'shadow-sm'
+                'transition-all', 'duration-300', 'ease-in-out', 'shadow-sm',
+                defaultDateColors.buttonDefaultBg, defaultDateColors.buttonDefaultText,
+                defaultDateColors.buttonHoverBg, defaultDateColors.buttonHoverText
             );
             if (myTimetableFilterDate === 'all') {
-                allButton.classList.add('bg-indigo-600', 'text-white', 'transform', 'scale-105');
-                allButton.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                allButton.classList.add(defaultDateColors.buttonActiveBg, defaultDateColors.buttonActiveText, 'transform', 'scale-105');
+                allButton.classList.remove(defaultDateColors.buttonDefaultBg, defaultDateColors.buttonDefaultText);
             } else {
-                allButton.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-                allButton.classList.remove('bg-indigo-600', 'text-white', 'transform', 'scale-105');
+                allButton.classList.remove(defaultDateColors.buttonActiveBg, defaultDateColors.buttonActiveText, 'transform', 'scale-105');
             }
             myTimetableDateFilterContainer.appendChild(allButton);
 
@@ -1007,16 +1253,18 @@
                 const button = document.createElement('button');
                 button.textContent = date;
                 button.dataset.date = date;
+                const dateColors = getDateColors(date); // 日付のテーマカラーを取得
                 button.classList.add(
                     'px-3', 'py-1.5', 'rounded-full', 'text-xs', 'font-semibold', // サイズを小さく調整
-                    'transition-all', 'duration-300', 'ease-in-out', 'shadow-sm'
+                    'transition-all', 'duration-300', 'ease-in-out', 'shadow-sm',
+                    dateColors.buttonDefaultBg, dateColors.buttonDefaultText,
+                    dateColors.buttonHoverBg, dateColors.buttonHoverText
                 );
                 if (myTimetableFilterDate === date) {
-                    button.classList.add('bg-indigo-600', 'text-white', 'transform', 'scale-105');
-                    button.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                    button.classList.add(dateColors.buttonActiveBg, dateColors.buttonActiveText, 'transform', 'scale-105');
+                    button.classList.remove(dateColors.buttonDefaultBg, dateColors.buttonDefaultText);
                 } else {
-                    button.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-                    button.classList.remove('bg-indigo-600', 'text-white', 'transform', 'scale-105');
+                    button.classList.remove(dateColors.buttonActiveBg, dateColors.buttonActiveText, 'transform', 'scale-105');
                 }
                 myTimetableDateFilterContainer.appendChild(button);
             });
@@ -1077,11 +1325,11 @@
                             userId = crypto.randomUUID(); // エラー時も一時的なIDを生成
                         }
                     }
-                    // ユーザーIDの表示
-                    if (userId) {
-                        currentUserIdSpan.textContent = userId;
-                        userIdDisplay.classList.remove('hidden');
-                    }
+                    // ユーザーIDの表示 (今回は非表示にするため、この部分のコードはコメントアウトまたは削除)
+                    // if (userId) {
+                    //     currentUserIdSpan.textContent = userId;
+                    //     userIdDisplay.classList.remove('hidden');
+                    // }
 
                     // CSVデータのパース
                     fullTimetable = parseCSV(TIF_TIMETABLE_CSV);
@@ -1099,7 +1347,7 @@
                         firestoreLoadingIndicator.classList.add('hidden'); // ローディングインジケーターを非表示に
                         myTimetable = {}; // リセット
                         snapshot.forEach((doc) => {
-                            myTimetable[doc.id] = true;
+                            myTimetable[doc.id] = doc.data(); // ドキュメントのデータを直接保存
                         });
                         renderMyTimetableFilterButtons(); // マイタイムテーブルのフィルターボタンを再レンダリング
                         renderMyTimetable(); // マイタイムテーブルを再レンダリング

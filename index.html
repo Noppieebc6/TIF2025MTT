@@ -60,6 +60,10 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
                 </span>
             </h2>
+            <!-- マイタイムテーブルの日付フィルターボタン -->
+            <div id="my-timetable-date-filter" class="flex flex-wrap justify-center gap-2 mb-4">
+                <!-- ボタンはJavaScriptで動的に追加されます -->
+            </div>
             <div id="my-timetable-content">
                 <p class="text-lg text-gray-600 text-center py-8">
                     まだイベントが追加されていません。下のリストから追加してください！
@@ -549,7 +553,8 @@
         let fullTimetable = [];
         let myTimetable = {}; // { eventId: true } の形式で管理
         let searchQuery = '';
-        let selectedDate = null;
+        let selectedDate = null; // 全体タイムテーブル用
+        let myTimetableFilterDate = 'all'; // マイタイムテーブル用: 'all'または特定の日付文字列
         let uniqueDates = [];
 
         // DOM要素の参照
@@ -557,6 +562,7 @@
         const currentUserIdSpan = document.getElementById('current-user-id');
         const firestoreLoadingIndicator = document.getElementById('firestore-loading-indicator');
         const myTimetableContent = document.getElementById('my-timetable-content');
+        const myTimetableDateFilterContainer = document.getElementById('my-timetable-date-filter'); // 新しい要素
         const searchInput = document.getElementById('search-input');
         const clearSearchButton = document.getElementById('clear-search-button');
         const dateSelectionButtonsContainer = document.getElementById('date-selection-buttons');
@@ -666,25 +672,68 @@
             }
         }
 
+        // アーティスト名の表示を切り替える関数
+        window.togglePerformerName = function(element) {
+            const shortNameSpan = element.querySelector('.short-name');
+            const fullNameSpan = element.querySelector('.full-name');
+            const toggleIndicatorSpan = element.querySelector('.toggle-indicator');
+
+            if (shortNameSpan && fullNameSpan && toggleIndicatorSpan) {
+                if (fullNameSpan.classList.contains('hidden')) {
+                    shortNameSpan.classList.add('hidden');
+                    fullNameSpan.classList.remove('hidden');
+                    toggleIndicatorSpan.textContent = ' (閉じる)';
+                } else {
+                    shortNameSpan.classList.remove('hidden');
+                    fullNameSpan.classList.add('hidden');
+                    toggleIndicatorSpan.textContent = '...';
+                }
+            }
+        };
+
+        // アーティスト名を表示するヘルパー関数
+        function getPerformerNameHtml(performerName, colors) {
+            const maxLength = 10; // 10文字以上で折りたたむ
+            if (performerName.length > maxLength) {
+                const shortName = performerName.substring(0, maxLength);
+                return `
+                    <p class="font-semibold ${colors.eventText} cursor-pointer" onclick="togglePerformerName(this)">
+                        <span class="short-name">${shortName}</span>
+                        <span class="full-name hidden">${performerName}</span>
+                        <span class="toggle-indicator text-blue-500 text-xs ml-1">...</span>
+                    </p>
+                `;
+            } else {
+                return `<p class="font-semibold ${colors.eventText}">${performerName}</p>`;
+            }
+        }
+
         // マイタイムテーブルのレンダリング
         function renderMyTimetable() {
-            const sortedMyTimetableEvents = Object.values(fullTimetable)
-                .filter(event => myTimetable[event.id])
-                .sort((a, b) => {
-                    const dateA = new Date(a.Date.replace(/(\d+)\/(\d+)\s(\w+)/, `2025/$1/$2`));
-                    const dateB = new Date(b.Date.replace(/(\d+)\/(\d+)\s(\w+)/, `2025/$1/$2`));
-                    if (dateA - dateB !== 0) {
-                        return dateA - dateB;
-                    }
-                    const timeA = parseInt(a.Time.split('-')[0].replace(':', ''));
-                    const timeB = parseInt(b.Time.split('-')[0].replace(':', ''));
-                    return timeA - timeB;
-                });
+            // まず、myTimetableに登録されているイベントをフルタイムテーブルから取得
+            let filteredEvents = Object.values(fullTimetable).filter(event => myTimetable[event.id]);
+
+            // myTimetableFilterDateに基づいてフィルタリング
+            if (myTimetableFilterDate !== 'all') {
+                filteredEvents = filteredEvents.filter(event => event.Date === myTimetableFilterDate);
+            }
+
+            // フィルタリングされたイベントを日付と時間でソート
+            const sortedMyTimetableEvents = filteredEvents.sort((a, b) => {
+                const dateA = new Date(a.Date.replace(/(\d+)\/(\d+)\s(\w+)/, `2025/$1/$2`));
+                const dateB = new Date(b.Date.replace(/(\d+)\/(\d+)\s(\w+)/, `2025/$1/$2`));
+                if (dateA - dateB !== 0) {
+                    return dateA - dateB;
+                }
+                const timeA = parseInt(a.Time.split('-')[0].replace(':', ''));
+                const timeB = parseInt(b.Time.split('-')[0].replace(':', ''));
+                return timeA - timeB;
+            });
 
             if (sortedMyTimetableEvents.length === 0) {
                 myTimetableContent.innerHTML = `
                     <p class="text-lg text-gray-600 text-center py-8">
-                        まだイベントが追加されていません。下のリストから追加してください！
+                        ${myTimetableFilterDate === 'all' ? 'まだイベントが追加されていません。下のリストから追加してください！' : `選択された日付 (${myTimetableFilterDate}) にはイベントがありません。`}
                     </p>
                 `;
                 return;
@@ -712,7 +761,7 @@
                     html += `
                             <li class="flex items-center justify-between ${colors.eventBg} p-3 rounded-lg shadow-sm border ${colors.eventBorder}">
                                 <div>
-                                    <p class="font-semibold ${colors.eventText}">${event.Performer}</p>
+                                    ${getPerformerNameHtml(event.Performer, colors)}
                                     <p class="text-sm ${colors.eventText} flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock mr-1 text-gray-500"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                         ${event.Time} @ ${event.Stage}
@@ -799,7 +848,7 @@
                     html += `
                             <li class="${colors.eventBg} p-3 rounded-lg shadow-sm border ${colors.eventBorder} flex items-center justify-between">
                                 <div>
-                                    <p class="font-semibold ${colors.eventText}">${event.Performer}</p>
+                                    ${getPerformerNameHtml(event.Performer, colors)}
                                     <p class="text-sm ${colors.eventText} flex items-center">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock mr-1 text-gray-500"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                         ${event.Time}
@@ -879,13 +928,22 @@
                 renderFullTimetable();
             });
 
-            // 日付選択ボタンのイベントリスナー (イベント委譲)
+            // 全体タイムテーブルの日付選択ボタンのイベントリスナー (イベント委譲)
             dateSelectionButtonsContainer.addEventListener('click', (event) => {
                 if (event.target.tagName === 'BUTTON') {
                     const date = event.target.textContent.trim();
                     selectedDate = date; // selectedDate を更新
                     renderDateButtons(); // ボタンのスタイルを更新
                     renderFullTimetable(); // 選択された日付のタイムテーブルを再レンダリング
+                }
+            });
+
+            // マイタイムテーブルの日付フィルターボタンのイベントリスナー (イベント委譲)
+            myTimetableDateFilterContainer.addEventListener('click', (event) => {
+                if (event.target.tagName === 'BUTTON' && event.target.dataset.date) {
+                    myTimetableFilterDate = event.target.dataset.date;
+                    renderMyTimetableFilterButtons(); // ボタンのスタイルを更新
+                    renderMyTimetable(); // マイタイムテーブルを新しいフィルターで再レンダリング
                 }
             });
 
@@ -902,14 +960,14 @@
             });
         }
 
-        // 日付選択ボタンのレンダリング
+        // 全体タイムテーブルの日付選択ボタンのレンダリング
         function renderDateButtons() {
             dateSelectionButtonsContainer.innerHTML = ''; // 既存のボタンをクリア
             uniqueDates.forEach(date => {
                 const button = document.createElement('button');
                 button.textContent = date;
                 button.classList.add(
-                    'px-6', 'py-3', 'rounded-full', 'text-lg', 'font-semibold',
+                    'px-4', 'py-2', 'rounded-full', 'text-sm', 'font-semibold', // サイズを小さく調整
                     'transition-all', 'duration-300', 'ease-in-out', 'shadow-md'
                 );
                 if (selectedDate === date) {
@@ -920,6 +978,47 @@
                     button.classList.remove('bg-indigo-600', 'text-white', 'transform', 'scale-105', 'shadow-xl');
                 }
                 dateSelectionButtonsContainer.appendChild(button);
+            });
+        }
+
+        // マイタイムテーブルの日付フィルターボタンのレンダリング
+        function renderMyTimetableFilterButtons() {
+            myTimetableDateFilterContainer.innerHTML = ''; // 既存のボタンをクリア
+
+            // 「すべて」ボタン
+            const allButton = document.createElement('button');
+            allButton.textContent = 'すべて';
+            allButton.dataset.date = 'all';
+            allButton.classList.add(
+                'px-3', 'py-1.5', 'rounded-full', 'text-xs', 'font-semibold', // サイズを小さく調整
+                'transition-all', 'duration-300', 'ease-in-out', 'shadow-sm'
+            );
+            if (myTimetableFilterDate === 'all') {
+                allButton.classList.add('bg-indigo-600', 'text-white', 'transform', 'scale-105');
+                allButton.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            } else {
+                allButton.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                allButton.classList.remove('bg-indigo-600', 'text-white', 'transform', 'scale-105');
+            }
+            myTimetableDateFilterContainer.appendChild(allButton);
+
+            // 個別の日付ボタン
+            uniqueDates.forEach(date => {
+                const button = document.createElement('button');
+                button.textContent = date;
+                button.dataset.date = date;
+                button.classList.add(
+                    'px-3', 'py-1.5', 'rounded-full', 'text-xs', 'font-semibold', // サイズを小さく調整
+                    'transition-all', 'duration-300', 'ease-in-out', 'shadow-sm'
+                );
+                if (myTimetableFilterDate === date) {
+                    button.classList.add('bg-indigo-600', 'text-white', 'transform', 'scale-105');
+                    button.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                } else {
+                    button.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                    button.classList.remove('bg-indigo-600', 'text-white', 'transform', 'scale-105');
+                }
+                myTimetableDateFilterContainer.appendChild(button);
             });
         }
 
@@ -990,7 +1089,8 @@
                     // ユニークな日付の取得とソート
                     uniqueDates = [...new Set(fullTimetable.map(event => event.Date))].sort();
                     if (uniqueDates.length > 0) {
-                        selectedDate = uniqueDates[0]; // 最初のユニークな日付を初期選択
+                        selectedDate = uniqueDates[0]; // 最初のユニークな日付を全体タイムテーブルの初期選択に
+                        myTimetableFilterDate = 'all'; // マイタイムテーブルの初期フィルターは「すべて」
                     }
 
                     // Firestoreからのマイタイムテーブル購読
@@ -1001,6 +1101,7 @@
                         snapshot.forEach((doc) => {
                             myTimetable[doc.id] = true;
                         });
+                        renderMyTimetableFilterButtons(); // マイタイムテーブルのフィルターボタンを再レンダリング
                         renderMyTimetable(); // マイタイムテーブルを再レンダリング
                         renderFullTimetable(); // 全タイムテーブルも更新（追加/削除ボタンの状態反映）
                     }, (err) => {
@@ -1010,9 +1111,9 @@
                     });
 
                     // 初回レンダリング
-                    renderDateButtons();
-                    renderFullTimetable();
-                    renderMyTimetable();
+                    renderDateButtons(); // 全体タイムテーブルの日付ボタン
+                    renderFullTimetable(); // 全体タイムテーブル
+                    // renderMyTimetableFilterButtonsとrenderMyTimetableはonSnapshot内で呼ばれるため、ここでは不要
                 });
 
                 // イベントリスナーの設定
